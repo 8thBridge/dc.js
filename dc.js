@@ -1317,14 +1317,14 @@ dc.marginable = function (_chart) {
 
             _chart.renderBrush(_chart.g());
 
-            _chart.root().call(d3.behavior.zoom()
-                    .x(_chart.x())
-                    .scaleExtent([1, 100])
-                    .on("zoom", function() {
-                        _chart.focus(_chart.x().domain());
-                        _chart.invokeZoomedListener(_chart);
-                        updateRangeSelChart();
-                    }));
+            // _chart.root().call(d3.behavior.zoom()
+            //         .x(_chart.x())
+            //         .scaleExtent([1, 100]));
+                    // .on("zoom", function() {
+                    //     _chart.focus(_chart.x().domain());
+                    //     _chart.invokeZoomedListener(_chart);
+                    //     updateRangeSelChart();
+                    // }));
 
             _chart.chartBodyG().call(d3.behavior.drag()
                     .on("drag", function() {
