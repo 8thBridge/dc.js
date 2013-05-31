@@ -33,6 +33,19 @@ dc.coordinateGridChart = function (_chart) {
     var _refocused = false;
     var _mouseZoomEnabled = true;
     var _unitCount;
+    var _enabled = true;
+
+
+    _chart.enabled = function(e) {
+        if (!arguments.length) return _enabled;
+        _enabled = e;
+        if(_enabled) {
+            try {
+                dc.redrawAll();
+            } catch(e) {}
+        }
+        return _chart;
+    }
 
     _chart.resetUnitCount = function () {
         _unitCount = null;
@@ -571,15 +584,17 @@ dc.coordinateGridChart = function (_chart) {
         prepareXAxis(_chart.g());
         prepareYAxis(_chart.g());
 
-        _chart.plotData();
+        if(_enabled) {
+            _chart.plotData();
 
-        if (_chart.elasticY())
-            _chart.renderYAxis(_chart.g());
+            if (_chart.elasticY())
+                _chart.renderYAxis(_chart.g());
 
-        if (_chart.elasticX() || _refocused)
-            _chart.renderXAxis(_chart.g());
+            if (_chart.elasticX() || _refocused)
+                _chart.renderXAxis(_chart.g());
 
-        _chart.redrawBrush(_chart.g());
+            _chart.redrawBrush(_chart.g());
+        }
 
         return _chart;
     };
