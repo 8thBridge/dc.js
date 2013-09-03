@@ -10,20 +10,22 @@ dc.rowChart = function (parent, chartGroup) {
 
     var _rowCssClass = "row";
 
-    var _chart = dc.marginable(dc.selectableChart(dc.colorChart(dc.baseChart({}))));
+    var _chart = dc.marginable(dc.colorChart(dc.baseChart({})));
 
-    var _xScale;
+    var _x;
 
     var _elasticX;
 
     var _xAxis = d3.svg.axis().orient("bottom");
 
     function calculateAxisScale() {
-        if (!_xScale || _elasticX) {
-            _xScale = d3.scale.linear().domain([0, d3.max(_chart.group().all(), _chart.valueAccessor())])
+        if (!_x || _elasticX) {
+            var extent = d3.extent(_chart.group().all(), _chart.valueAccessor());
+            if (extent[0] > 0) extent[0] = 0;
+            _x = d3.scale.linear().domain(extent)
                 .range([0, _chart.effectiveWidth()]);
 
-            _xAxis.scale(_xScale);
+            _xAxis.scale(_x);
         }
     }
 
@@ -62,6 +64,12 @@ dc.rowChart = function (parent, chartGroup) {
         return _chart.keyAccessor()(d);
     });
 
+    _chart.x = function(x){
+        if(!arguments.length) return _x;
+        _x = x;
+        return _chart;
+    };
+
     function drawGridLines() {
         _g.selectAll("g.tick")
             .select("line.grid-line")
@@ -85,12 +93,12 @@ dc.rowChart = function (parent, chartGroup) {
         var rows = _g.selectAll("g." + _rowCssClass)
             .data(_chart.group().all());
 
-        createElements(rows, _chart.group().all());
+        createElements(rows);
         removeElements(rows);
         updateElements(rows);
     }
 
-    function createElements(rows, rowData) {
+    function createElements(rows) {
         var rowEnter = rows.enter()
             .append("g")
             .attr("class", function (d, i) {
@@ -98,8 +106,6 @@ dc.rowChart = function (parent, chartGroup) {
             });
 
         rowEnter.append("rect").attr("width", 0);
-
-        createTitles(rowEnter);
 
         createLabels(rowEnter);
         updateLabels(rows);
@@ -112,10 +118,9 @@ dc.rowChart = function (parent, chartGroup) {
     function updateElements(rows) {
         var height = rowHeight();
 
-        var rect = rows.attr("transform", function (d, i) {
-            return "translate(0," + ((i + 1) * _gap + i * height) + ")";
-        })
-            .select("rect")
+        var rect = rows.attr("transform",function (d, i) {
+                return "translate(0," + ((i + 1) * _gap + i * height) + ")";
+            }).select("rect")
             .attr("height", height)
             .attr("fill", _chart.getColor)
             .on("click", onClick)
@@ -128,13 +133,18 @@ dc.rowChart = function (parent, chartGroup) {
 
         dc.transition(rect, _chart.transitionDuration())
             .attr("width", function (d) {
-                return _xScale(_chart.valueAccessor()(d));
-            });
+                return Math.abs(_x(0) - _x(_chart.valueAccessor()(d)));
+            })
+            .attr("transform", translateX);
+
+        createTitles(rows);
+        updateLabels(rows);
     }
 
-    function createTitles(rowEnter) {
+    function createTitles(rows) {
         if (_chart.renderTitle()) {
-            rowEnter.append("title").text(function (d) {
+            rows.selectAll("title").remove();
+            rows.append("title").text(function (d) {
                 return _chart.title()(d);
             });
         }
@@ -142,13 +152,14 @@ dc.rowChart = function (parent, chartGroup) {
 
     function createLabels(rowEnter) {
         if (_chart.renderLabel()) {
-            rowEnter.append("text");
+            rowEnter.append("text")
+                .on("click", onClick);
         }
     }
 
     function updateLabels(rows) {
         if (_chart.renderLabel()) {
-            rows.select("text")
+            var lab = rows.select("text")
                 .attr("x", _labelOffsetX)
                 .attr("y", _labelOffsetY)
                 .attr("class", function (d, i) {
@@ -157,6 +168,8 @@ dc.rowChart = function (parent, chartGroup) {
                 .text(function (d) {
                     return _chart.label()(d);
                 });
+            dc.transition(lab, _chart.transitionDuration())
+            .attr("transform", translateX);
         }
     }
 
@@ -171,6 +184,13 @@ dc.rowChart = function (parent, chartGroup) {
 
     function onClick(d) {
         _chart.onClick(d);
+    }
+
+    function translateX(d) {
+        var x = _x(_chart.valueAccessor()(d)),
+            x0 = _x(0),
+            s = x > x0 ? x0 : x;
+        return "translate("+s+",0)";
     }
 
     _chart.doRedraw = function () {
@@ -196,18 +216,18 @@ dc.rowChart = function (parent, chartGroup) {
 
     _chart.labelOffsetX = function (o) {
         if (!arguments.length) return _labelOffsetX;
-        _labelOffset = o;
+        _labelOffsetX = o;
         return _chart;
     };
 
     _chart.labelOffsetY = function (o) {
         if (!arguments.length) return _labelOffsetY;
-        _labelOffset = o;
+        _labelOffsetY = o;
         return _chart;
     };
 
     _chart.isSelectedRow = function (d) {
-        return _chart.filter() == _chart.keyAccessor()(d);
+        return _chart.hasFilter(_chart.keyAccessor()(d));
     };
 
     return _chart.anchor(parent, chartGroup);

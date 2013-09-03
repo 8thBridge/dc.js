@@ -3,13 +3,14 @@ dc.pieChart = function (parent, chartGroup) {
 
     var _sliceCssClass = "pie-slice";
 
-    var _radius = 90, _innerRadius = 0;
+    var _radius,
+        _innerRadius = 0;
 
     var _g;
 
     var _minAngleForLabel = DEFAULT_MIN_ANGLE_FOR_LABEL;
 
-    var _chart = dc.selectableChart(dc.colorChart(dc.baseChart({})));
+    var _chart = dc.colorChart(dc.baseChart({}));
 
     var _slicesCap = Infinity;
     var _othersLabel = "Others";
@@ -60,6 +61,9 @@ dc.pieChart = function (parent, chartGroup) {
     function drawChart() {
         if (_chart.dataSet()) {
             var pie = calculateDataPie();
+
+            // set radius on basis of chart dimension if missing
+            _radius = _radius ? _radius : d3.min([_chart.width(), _chart.height()]) /2;
 
             var arc = _chart.buildArcs();
 
@@ -126,6 +130,8 @@ dc.pieChart = function (parent, chartGroup) {
         if (_chart.renderLabel()) {
             var labels = _g.selectAll("text." + _sliceCssClass)
                 .data(pieData);
+
+            labels.exit().remove();
 
             var labelsEnter = labels
                 .enter()
@@ -257,7 +263,7 @@ dc.pieChart = function (parent, chartGroup) {
     };
 
     _chart.isSelectedSlice = function (d) {
-        return _chart.filter() == _chart.keyAccessor()(d.data);
+        return _chart.hasFilter(_chart.keyAccessor()(d.data));
     };
 
     _chart.doRedraw = function () {
@@ -301,7 +307,7 @@ dc.pieChart = function (parent, chartGroup) {
     }
 
     function sliceHasNoData(data) {
-        return _chart.valueAccessor()(data) == 0;
+        return _chart.valueAccessor()(data) === 0;
     }
 
     function tweenPie(b) {
@@ -317,7 +323,7 @@ dc.pieChart = function (parent, chartGroup) {
     }
 
     function isOffCanvas(current) {
-        return current == null || isNaN(current.startAngle) || isNaN(current.endAngle);
+        return !current || isNaN(current.startAngle) || isNaN(current.endAngle);
     }
 
     function onClick(d) {

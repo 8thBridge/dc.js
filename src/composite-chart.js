@@ -1,4 +1,4 @@
-dc.compositeChart = function(parent, chartGroup) {
+dc.compositeChart = function (parent, chartGroup) {
     var SUB_CHART_CLASS = "sub";
 
     var _chart = dc.coordinateGridChart({});
@@ -6,7 +6,7 @@ dc.compositeChart = function(parent, chartGroup) {
 
     _chart.transitionDuration(500);
 
-    dc.override(_chart, "generateG", function() {
+    dc.override(_chart, "generateG", function () {
         var g = this._generateG();
 
         for (var i = 0; i < _children.length; ++i) {
@@ -14,15 +14,13 @@ dc.compositeChart = function(parent, chartGroup) {
 
             generateChildG(child, i);
 
-            if (child.dimension() == null) child.dimension(_chart.dimension());
-            if (child.group() == null) child.group(_chart.group());
+            if (child.dimension() === undefined) child.dimension(_chart.dimension());
+            if (child.group() === undefined) child.group(_chart.group());
             child.chartGroup(_chart.chartGroup());
             child.svg(_chart.svg());
-            child.height(_chart.height());
-            child.width(_chart.width());
-            child.margins(_chart.margins());
             child.xUnits(_chart.xUnits());
             child.transitionDuration(_chart.transitionDuration());
+            child.brushOn(_chart.brushOn());
         }
 
         return g;
@@ -33,11 +31,11 @@ dc.compositeChart = function(parent, chartGroup) {
         child.g().attr("class", SUB_CHART_CLASS + " _" + i);
     }
 
-    _chart.plotData = function() {
+    _chart.plotData = function () {
         for (var i = 0; i < _children.length; ++i) {
             var child = _children[i];
 
-            if (child.g() == null) {
+            if (child.g() === undefined) {
                 generateChildG(child, i);
             }
 
@@ -48,11 +46,11 @@ dc.compositeChart = function(parent, chartGroup) {
 
             child.plotData();
 
-            child.invokeRenderlet(child);
+            child.activateRenderlets();
         }
     };
 
-    _chart.fadeDeselectedArea = function() {
+    _chart.fadeDeselectedArea = function () {
         for (var i = 0; i < _children.length; ++i) {
             var child = _children[i];
             child.brush(_chart.brush());
@@ -60,12 +58,18 @@ dc.compositeChart = function(parent, chartGroup) {
         }
     };
 
-    _chart.compose = function(charts) {
+    _chart.compose = function (charts) {
         _children = charts;
+        for (var i = 0; i < _children.length; ++i) {
+            var child = _children[i];
+            child.height(_chart.height());
+            child.width(_chart.width());
+            child.margins(_chart.margins());
+        }
         return _chart;
     };
 
-    _chart.children = function(){
+    _chart.children = function () {
         return _children;
     };
 
@@ -77,7 +81,7 @@ dc.compositeChart = function(parent, chartGroup) {
         return allMins;
     }
 
-    _chart.yAxisMin = function() {
+    _chart.yAxisMin = function () {
         return d3.min(getAllYAxisMinFromChildCharts());
     };
 
@@ -89,7 +93,7 @@ dc.compositeChart = function(parent, chartGroup) {
         return allMaxes;
     }
 
-    _chart.yAxisMax = function() {
+    _chart.yAxisMax = function () {
         return dc.utils.add(d3.max(getAllYAxisMaxFromChildCharts()), _chart.yAxisPadding());
     };
 
@@ -101,7 +105,7 @@ dc.compositeChart = function(parent, chartGroup) {
         return allMins;
     }
 
-    _chart.xAxisMin = function() {
+    _chart.xAxisMin = function () {
         return dc.utils.subtract(d3.min(getAllXAxisMinFromChildCharts()), _chart.xAxisPadding());
     };
 
@@ -113,8 +117,35 @@ dc.compositeChart = function(parent, chartGroup) {
         return allMaxes;
     }
 
-    _chart.xAxisMax = function() {
+    _chart.xAxisMax = function () {
         return dc.utils.add(d3.max(getAllXAxisMaxFromChildCharts()), _chart.xAxisPadding());
+    };
+
+    _chart.legendables = function () {
+        var items = [];
+
+        for (var j = 0; j < _children.length; ++j) {
+            var childChart = _children[j];
+            childChart.allGroups().forEach(function (g, i) {
+                items.push(dc.utils.createLegendable(childChart, g, i, childChart.getValueAccessorByIndex(i)));
+            });
+        }
+
+        return items;
+    };
+
+    _chart.legendHighlight = function (d) {
+        for (var j = 0; j < _children.length; ++j) {
+            var child = _children[j];
+            child.legendHighlight(d);
+        }
+    };
+
+    _chart.legendReset = function (d) {
+        for (var j = 0; j < _children.length; ++j) {
+            var child = _children[j];
+            child.legendReset(d);
+        }
     };
 
     return _chart.anchor(parent, chartGroup);

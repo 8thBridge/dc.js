@@ -75,10 +75,10 @@ suite.addBatch({
             assert.equal(pieChart.select("svg g").attr("transform"), "translate(100,100)");
         },
         'slice g should be created with class': function (pieChart) {
-            assert.equal(pieChart.selectAll("svg g g.pie-slice").data().length, 5);
+            assert.lengthOf(pieChart.selectAll("svg g g.pie-slice").data(), 5);
         },
         'slice path should be created': function (pieChart) {
-            assert.equal(pieChart.selectAll("svg g g.pie-slice path").data().length, 5);
+            assert.lengthOf(pieChart.selectAll("svg g g.pie-slice path").data(), 5);
         },
         'slice css class should be numbered with index': function (pieChart) {
             pieChart.selectAll("g.pie-slice").each(function (p, i) {
@@ -87,12 +87,12 @@ suite.addBatch({
         },
         'slice path should be filled': function (pieChart) {
             pieChart.selectAll("svg g g.pie-slice path").each(function (p) {
-                assert.isTrue(d3.select(this).attr("fill") != "");
+                assert.isTrue(d3.select(this).attr("fill") !== "");
             });
         },
         'slice path d should be created': function (pieChart) {
             pieChart.selectAll("svg g g.pie-slice path").each(function (p) {
-                assert.isTrue(d3.select(this).attr("d") != "");
+                assert.isTrue(d3.select(this).attr("d") !== "");
             });
         },
         'slice path fill should be set correctly': function (pieChart) {
@@ -102,7 +102,7 @@ suite.addBatch({
             assert.equal(d3.select(pieChart.selectAll("g.pie-slice path")[0][3]).attr("fill"), "#c6dbef");
         },
         'slice label should be created': function (pieChart) {
-            assert.equal(pieChart.selectAll("svg text.pie-slice").data().length, 5);
+            assert.lengthOf(pieChart.selectAll("svg text.pie-slice").data(), 5);
         },
         'slice label transform to centroid': function (pieChart) {
             assert.equal(pieChart.selectAll("svg g text.pie-slice").attr("transform"), "translate(52.58610463437159,-38.20604139901075)");
@@ -132,7 +132,7 @@ suite.addBatch({
                 return pieChart;
             },
             'multiple invocation of render should update chart': function (pieChart) {
-                assert.equal(d3.selectAll("#pie-chart-age svg")[0].length, 1);
+                assert.lengthOf(d3.selectAll("#pie-chart-age svg")[0], 1);
             }
         },
         'filter': {
@@ -172,7 +172,7 @@ suite.addBatch({
                 return pieChart;
             },
             'on click function should be defined': function (pieChart) {
-                assert.isTrue(pieChart.selectAll("svg g g.pie-slice path").on("click") != undefined);
+                assert.isTrue(pieChart.selectAll("svg g g.pie-slice path").on("click") !== undefined);
             },
             'by default no slice should be selected': function (pieChart) {
                 assert.isFalse(pieChart.hasFilter());
@@ -182,16 +182,33 @@ suite.addBatch({
                 assert.isTrue(pieChart.hasFilter());
                 pieChart.filterAll();
             },
-            'should filter dimension by selection': function (pieChart) {
-                pieChart.filter("66");
-                assert.equal(pieChart.dimension().top(Infinity).length, 1);
+            'should filter dimension by single selection': function (pieChart) {
+                pieChart.filter("22");
+                assert.equal(countryGroup.all()[0].value, 1);
+                assert.equal(countryGroup.all()[1].value, 1);
                 pieChart.filterAll();
             },
-            'should highlight selected slice': function (pieChart) {
+            'should filter dimension by multiple selections': function (pieChart) {
                 pieChart.filter("66");
+                pieChart.filter("22");
+                assert.equal(countryGroup.all()[0].value, 1);
+                assert.equal(countryGroup.all()[1].value, 2);
+                pieChart.filterAll();
+            },
+            'should filter dimension with deselection': function (pieChart) {
+                pieChart.filter("22");
+                pieChart.filter("66");
+                pieChart.filter("22");
+                assert.equal(countryGroup.all()[0].value, 0);
+                assert.equal(countryGroup.all()[1].value, 1);
+                pieChart.filterAll();
+            },
+            'should highlight selected slices': function (pieChart) {
+                pieChart.filter("66");
+                pieChart.filter("22");
                 pieChart.render();
                 pieChart.selectAll("g.pie-slice").each(function (d) {
-                    if (d.data.key == "66")
+                    if (d.data.key === "66" || d.data.key === "22")
                         assert.isTrue(d3.select(this).attr("class").indexOf("selected") > 0);
                     else
                         assert.isTrue(d3.select(this).attr("class").indexOf("deselected") > 0);
@@ -213,7 +230,7 @@ suite.addBatch({
                 pieChart.redraw();
                 pieChart.selectAll(".pie-slice path").each(function (d) {
                     var cls = d3.select(this).attr("class");
-                    assert.isTrue(cls == null || cls == "");
+                    assert.isTrue(cls === null || cls === "");
                 });
             },
             teardown: function (pieChart) {
@@ -232,6 +249,12 @@ suite.addBatch({
             'onClick should reset filter if clicked twice': function (pieChart) {
                 pieChart.onClick(pieChart.group().all()[0]);
                 assert.equal(pieChart.filter(), null);
+            },
+            'multiple onClick should trigger filtering of according groups': function (pieChart) {
+                pieChart.onClick(pieChart.group().all()[0]);
+                pieChart.onClick(pieChart.group().all()[1]);
+                assert.isTrue(pieChart.hasFilter("22"));
+                assert.isTrue(pieChart.hasFilter("33"));
             },
             teardown: function () {
                 resetAllFilters();
@@ -255,7 +278,7 @@ suite.addBatch({
         topic: function () {
             var chart = buildChart("pie-chart2");
             dateDimension.filter([new Date(2010, 0, 1), new Date(2010, 0, 3)]);
-            chart.redraw()
+            chart.redraw();
             dateDimension.filter([new Date(2012, 0, 1), new Date(2012, 11, 30)]);
             chart.redraw();
             return chart;
@@ -286,7 +309,7 @@ suite.addBatch({
             return chart;
         },
         'should render correct number of text': function (chart) {
-            assert.equal(chart.selectAll("text.pie-slice")[0].length, 5);
+            assert.lengthOf(chart.selectAll("text.pie-slice")[0], 5);
         },
         'custom function should be used to dynamically generate label': function (chart) {
             assert.equal(d3.select(chart.selectAll("text.pie-slice")[0][0]).text(), "custom");
@@ -295,7 +318,7 @@ suite.addBatch({
             assert.equal(d3.select(chart.selectAll("text.pie-slice")[0][1]).text(), "");
         },
         'should render correct number of title': function (chart) {
-            assert.equal(chart.selectAll("g.pie-slice title")[0].length, 5);
+            assert.lengthOf(chart.selectAll("g.pie-slice title")[0], 5);
         },
         'custom function should be used to dynamically generate title': function (chart) {
             chart.selectAll("g.pie-slice title").each(function (p) {
@@ -319,7 +342,7 @@ suite.addBatch({
             return chart;
         },
         'slice label should not be created': function (pieChart) {
-            assert.equal(pieChart.selectAll("svg g text.pie-slice").data().length, 0);
+            assert.lengthOf(pieChart.selectAll("svg g text.pie-slice").data(), 0);
         },
         teardown: function (chart) {
             resetAllFilters();
@@ -382,7 +405,7 @@ suite.addBatch({
     'custom filter handler': {
         topic: function () {
             var chart = buildChart("pie-chart-filter-handler");
-            chart.filterHandler(function(dimension, filters){
+            chart.filterHandler(function (dimension, filters) {
                 dimension.filter("66");
                 return ["66"];
             });

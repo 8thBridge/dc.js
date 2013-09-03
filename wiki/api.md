@@ -5,20 +5,20 @@ name space.
 
 * [Base Chart [abstract]](#base-chart)
 * [Color Chart [abstract]](#color-chart)
-* [Selectable Chart [abstract]](#selectable-chart)
 * [Stackable Chart [abstract]](#stackable-chart)
 * [Coordinate Grid Chart [abstract] < Base Chart](#coordinate-grid-chart)
-* [Pie Chart [concrete] < Selectable Chart < Color Chart < Base Chart](#pie-chart)
-* [Row Chart [concrete] < Selectable Chart < Colro Chart < Base chart](#row-chart)
-* [Bar Chart [concrete] < Selectable Chart < Stackable Chart < CoordinateGrid Chart](#bar-chart)
+* [Pie Chart [concrete] < Color Chart < Base Chart](#pie-chart)
+* [Row Chart [concrete] < Colro Chart < Base chart](#row-chart)
+* [Bar Chart [concrete] < Stackable Chart < CoordinateGrid Chart](#bar-chart)
 * [Line Chart [concrete] < Stackable Chart < CoordinateGrid Chart](#line-chart)
 * [Composite Chart [concrete] < CoordinateGrid Chart](#composite-chart)
-* [Abstract Bubble Chart [abstract] < Selectable Chart < Color Chart](#abstract-bubble-chart)
+* [Abstract Bubble Chart [abstract] < Color Chart](#abstract-bubble-chart)
 * [Bubble Chart [concrete] < Abstract Bubble Chart < CoordinateGrid Chart](#bubble-chart)
 * [Bubble Overlay Chart [concrete] < Abstract Bubble Chart < Base Chart](#bubble-overlay-chart)
-* [Geo Choropleth Chart [concrete] < Selectable Chart < Color Chart < Base Chart](#geo-choropleth-chart)
+* [Geo Choropleth Chart [concrete] < Color Chart < Base Chart](#geo-choropleth-chart)
 * [Data Count Widget [concrete] < Base Chart](#data-count)
 * [Data Table Widget [concrete] < Base Chart](#data-table)
+* [Legend [concrete]](#legend)
 * [Listeners](#listeners)
 * [Utilities](#utilities)
 
@@ -53,13 +53,14 @@ then it will be used as the new dimension.
 
 If no value specified then the current dimension will be returned.
 
-#### .group([value]) - **mandatory**
+#### .group([value], [name]) - **mandatory**
 Set or get group attribute of a chart. In dc a group is a
 [crossfilter group](https://github.com/square/crossfilter/wiki/API-Reference#wiki-group). Usually the group should be
 created from the particular dimension associated with the same chart. If the value is given, then it will be used as
 the new group.
 
 If no value specified then the current group will be returned.
+If name is specified then it will be used to generate legend label.
 
 #### .filterAll()
 Clear all filters associated with this chart.
@@ -187,6 +188,56 @@ chart.renderlet(function(chart){
 });
 ```
 
+#### .filter([filterValue])
+Filter the chart by the given value or return the current filter if the input parameter is missing.
+```js
+// filter by a single string
+chart.filter("Sunday");
+// filter by a single age
+chart.filter(18);
+```
+
+#### .filters()
+Return all current filters. This method does not perform defensive cloning of the internal filter array before returning
+therefore any modification of returned array will affact chart's internal filter storage.
+
+#### .hasFilter([filter])
+Check whether is any active filter or a specific filter is associated with particular chart instance.
+This function is **not chainable**.
+
+#### .filterHandler([function])
+Set or get filter handler. Filter handler is a function that performs the filter action on a specific dimension. Using
+custom filter handler give you the flexibility to perform additional logic before or after filtering.
+
+```js
+// default filter handler
+function(dimension, filter){
+    dimension.filter(filter); // perform filtering
+    return filter; // return the actual filter value
+}
+
+// custom filter handler
+chart.filterHandler(function(dimension, filter){
+    var newFilter = filter + 10;
+    dimension.filter(newFilter);
+    return newFilter; // set the actual filter value to the new value
+});
+```
+
+#### .expireCache()
+Expire internal chart cache. dc.js chart cache some data internally on a per chart basis so it can speed up rendering
+and avoid unnecessary calculation however under certain circumstances it might be useful to clear the cache e.g. after
+you invoke crossfilter.add function or if you reset group or dimension post render it is always a good idea to clear
+the cache to make sure charts are rendered properly.
+
+#### .legend([dc.legend])
+Attach dc.legend widget to this chart. Legend widget will automatically draw legend labels based on the color setting
+and names associated with each group.
+
+```js
+chart.legend(dc.legend().x(400).y(10).itemHeight(13).gap(5))
+```
+
 ## <a name="color-chart" href="#color-chart">#</a> Color Chart [Abstract]
 Color chart is an abstract chart functional class created to provide universal coloring support as a mix-in for any concrete
 chart implementation.
@@ -223,49 +274,15 @@ chart.colorDomain([0, 11])
 chart.colorDomain([0, 364])
 ```
 
-## <a name="selectable-chart" href="#selectable-chart">#</a> Selectable Chart [Abstract]
-Single selection chart is an abstract functional class created to provide cross-chart support for single value filtering
-capability.
-
-#### .filter([filterValue])
-Filter the chart by the given value or return the current filter if the input parameter is missing.
-```js
-// filter by a single string
-chart.filter("Sunday");
-// filter by a single age
-chart.filter(18);
-```
-
-#### .hasFilter()
-Check whether is an active filter associated with particular chart instance. This function is **not chainable**.
-
-#### .filterHandler([function])
-Set or get filter handler. Filter handler is a function that performs the filter action on a specific dimension. Using
-custom filter handler give you the flexibility to perform additional logic before or after filtering.
-
-```js
-// default filter handler
-function(dimension, filter){
-    dimension.filter(filter); // perform filtering
-    return filter; // return the actual filter value
-}
-
-// custom filter handler
-chart.filterHandler(function(dimension, filter){
-    var newFilter = filter + 10;
-    dimension.filter(newFilter);
-    return newFilter; // set the actual filter value to the new value
-});
-```
-
 ## <a name="stackable-chart" href="#stackable-chart">#</a> Stackable Chart [Abstract]
 Stackable chart is an abstract chart introduced to provide cross-chart support of stackability. Concrete implementation of
 charts can then selectively mix-in this capability.
 
-#### .stack(group[, retriever])
+#### .stack(group[, name, retriever])
 Stack a new crossfilter group into this chart with optionally a custom value retriever. All stacks in the same chart will
 share the same key accessor therefore share the same set of keys. In more concrete words, imagine in a stacked bar chart
-all bars will be positioned using the same set of keys on the x axis while stacked vertically.
+all bars will be positioned using the same set of keys on the x axis while stacked vertically. If name is specified then
+it will be used to generate legend label.
 ```js
 // stack group using default accessor
 chart.stack(valueSumGroup)
@@ -408,12 +425,23 @@ chart.renderlet(function(chart){
 })
 ```
 
-#### .rangeSelChart([chart])
+#### .mouseZoomable([boolean])
+Set or get mouse zoom capability flag (default: false). When turned on the chart will be zoomable through mouse wheel
+ . If range selector chart is also attached zooming will also update the range selection brush on associated range
+ selector chart.
+
+#### .rangeChart([chart])
 Get or set the range selection chart associated with this instance. Setting the range selection chart using this function
-will automatically update its selection brush when the current chart zooms in or being dragged. See the
+will automatically update its selection brush when the current chart zooms in. In return the given range chart will also
+automatically attach this chart as its focus chart hence zoom in when range brush updates. See the
 [Nasdaq 100 Index](http://nickqizhu.github.com/dc.js/) example for this effect in action.
 
-## <a name="pie-chart" href="#pie-chart">#</a> Pie Chart [Concrete] < [Selectable Chart](#selectable-chart) < [Color Chart](#color-chart) < [Base Chart](#base-chart)
+#### .clipPadding([padding])
+Get or set padding in pixel for clip path. Once set padding will be applied evenly to top, left, right, and bottom padding
+ when clip path is generated. If set to zero, then the clip area will be exactly the chart body area minus the margins.
+ Default: 5
+
+## <a name="pie-chart" href="#pie-chart">#</a> Pie Chart [Concrete] < [Color Chart](#color-chart) < [Base Chart](#base-chart)
 This chart is a concrete pie chart implementation usually used to visualize small number of categorical distributions.
 Pie chart implementation uses keyAccessor to generate slices, and valueAccessor to calculate the size of each slice(key)
 relatively to the total sum of all values.
@@ -475,7 +503,7 @@ function (data, sum) {
 #### .othersLabel([label])
 Get or set the label for *Others* slice when slices cap is specified. Default label is **Others**.
 
-## <a name="row-chart" href="#row-chart">#</a> Row Chart [Concrete] < [SelectableChart](#selectable-chart) < [Color Chart](#color-chart) < [Base Chart](#base-chart)
+## <a name="row-chart" href="#row-chart">#</a> Row Chart [Concrete] < [Color Chart](#color-chart) < [Base Chart](#base-chart)
 Concrete row chart implementation.
 
 #### dc.rowChart(parent[, chartGroup])
@@ -507,7 +535,7 @@ Get of set the y offset (vertical space to the top left corner of a row) for lab
 Get or set the elasticity on x axis. If this attribute is set to true, then the x axis will rescle to auto-fit the data
 range when filtered.
 
-## <a name="bar-chart" href="#bar-chart">#</a> Bar Chart [Concrete] < [Selectable Chart](#selectable-chart) < [Stackable Chart](#stackable-chart) < [CoordinateGrid Chart](#coordinate-grid-chart)
+## <a name="bar-chart" href="#bar-chart">#</a> Bar Chart [Concrete] < [Stackable Chart](#stackable-chart) < [CoordinateGrid Chart](#coordinate-grid-chart)
 Concrete bar chart/histogram implementation.
 
 Examples:
@@ -631,7 +659,7 @@ moveChart.compose([
 ]);
 ```
 
-## <a name="abstract-bubble-chart" href="#abstract-bubble-chart">#</a> Abstract Bubble Chart [Abstract] < [Selectable Chart](#selectable-chart) < [Color Chart](#color-chart)
+## <a name="abstract-bubble-chart" href="#abstract-bubble-chart">#</a> Abstract Bubble Chart [Abstract] < [Color Chart](#color-chart)
 An abstraction provides reusable functionalities for any chart that needs to visualize data using bubbles.
 
 #### .r([bubbleRadiusScale])
@@ -729,7 +757,7 @@ Set up a data point on the overlay. The name of a data point should match a spec
 If a match is found (point name <-> data group key) then a bubble will be automatically generated at the position specified by the
 function. x and y value specified here are relative to the underlying svg.
 
-## <a name="geo-choropleth-chart" href="#geo-choropleth-chart">#</a> Geo Choropleth Chart [Concrete] < [Selectable Chart](#selectable-chart) < [Color Chart](#color-chart) < [Base Chart](#base-chart)
+## <a name="geo-choropleth-chart" href="#geo-choropleth-chart">#</a> Geo Choropleth Chart [Concrete] < [Color Chart](#color-chart) < [Base Chart](#base-chart)
 Geo choropleth chart is design to make creating crossfilter driven choropleth map from GeoJson data an easy process. This
 chart implementation was inspired by [the great d3 choropleth example](http://bl.ocks.org/4060606).
 
@@ -892,6 +920,29 @@ Get or set sort order. Default value: ``` d3.ascending ```
     chart.order(d3.descending);
 ```
 
+## <a name="legend" href="#legend">#</a> Legend [Concrete]
+Legend is a attachable widget that can be added to other dc charts to render horizontal legend labels.
+
+```js
+chart.legend(dc.legend().x(400).y(10).itemHeight(13).gap(5))
+```
+
+Examples:
+* [Nasdaq 100 Index](http://nickqizhu.github.com/dc.js/)
+* [Canadian City Crime Stats](http://nickqizhu.github.com/dc.js/crime/index.html)
+
+#### .x([value])
+Set or get x coordinate for legend widget. Default value: 0.
+
+#### .y([value])
+Set or get y coordinate for legend widget. Default value: 0.
+
+#### .gap([value])
+Set or get gap between legend items. Default value: 5.
+
+#### .itemHeight([value])
+Set or get legend item height. Default value: 12.
+
 ## <a name="listeners" href="#listeners">#</a> Listeners
 All dc chart instance supports the following listeners.
 
@@ -908,13 +959,10 @@ This listener function will be invoked before chart redrawing.
 This listener function will be invoked after chart finish redrawing including all renderlets' logic.
 
 ### .on("filtered", function(chart, filter){...})
-This listener function will be invoked after a filter is applied.
+This listener function will be invoked after a filter is applied, added or removed.
 
 ### .on("zoomed", function(chart, filter){...})
 This listener function will be invoked after a zoom is triggered.
-
-### .on("dragged", function(chart, filter){...})
-This listener function will be invoked after a drag motion is triggered.
 
 
 ## <a name="utilities" href="#utilities">#</a> Utilities

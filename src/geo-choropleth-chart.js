@@ -1,17 +1,17 @@
 dc.geoChoroplethChart = function (parent, chartGroup) {
-    var _chart = dc.selectableChart(dc.colorChart(dc.baseChart({})));
+    var _chart = dc.colorChart(dc.baseChart({}));
 
     _chart.colorAccessor(function (d, i) {
         return d;
     });
 
     var _geoPath = d3.geo.path();
+    var _projectionFlag;
 
     var _geoJsons = [];
 
     _chart.doRender = function () {
         _chart.resetSvg();
-
         for (var layerIndex = 0; layerIndex < _geoJsons.length; ++layerIndex) {
             var states = _chart.svg().append("g")
                 .attr("class", "layer" + layerIndex);
@@ -31,6 +31,7 @@ dc.geoChoroplethChart = function (parent, chartGroup) {
 
             plotData(layerIndex);
         }
+        _projectionFlag = false;
     };
 
     function plotData(layerIndex) {
@@ -84,11 +85,11 @@ dc.geoChoroplethChart = function (parent, chartGroup) {
     }
 
     function isSelected(layerIndex, d) {
-        return _chart.hasFilter() && _chart.filter() == getKey(layerIndex, d);
+        return _chart.hasFilter() && _chart.hasFilter(getKey(layerIndex, d));
     }
 
     function isDeselected(layerIndex, d) {
-        return _chart.hasFilter() && _chart.filter() != getKey(layerIndex, d);
+        return _chart.hasFilter() && !_chart.hasFilter(getKey(layerIndex, d));
     }
 
     function getKey(layerIndex, d) {
@@ -99,7 +100,7 @@ dc.geoChoroplethChart = function (parent, chartGroup) {
         return _geoJsons[index];
     }
 
-    function renderPaths(regionG, layerIndex, data, maxValue) {
+    function renderPaths(regionG, layerIndex, data) {
         var paths = regionG
             .select("path")
             .attr("fill", function (d) {
@@ -138,7 +139,11 @@ dc.geoChoroplethChart = function (parent, chartGroup) {
     _chart.doRedraw = function () {
         for (var layerIndex = 0; layerIndex < _geoJsons.length; ++layerIndex) {
             plotData(layerIndex);
+            if(_projectionFlag) {
+                _chart.svg().selectAll("g." + geoJson(layerIndex).name + " path").attr("d", _geoPath);
+            }
         }
+        _projectionFlag = false;
     };
 
     _chart.overlayGeoJson = function (json, name, keyAccessor) {
@@ -146,7 +151,7 @@ dc.geoChoroplethChart = function (parent, chartGroup) {
             if (_geoJsons[i].name == name) {
                 _geoJsons[i].data = json;
                 _geoJsons[i].keyAccessor = keyAccessor;
-                return _chart
+                return _chart;
             }
         }
         _geoJsons.push({name: name, data: json, keyAccessor: keyAccessor});
@@ -155,6 +160,7 @@ dc.geoChoroplethChart = function (parent, chartGroup) {
 
     _chart.projection = function (projection) {
         _geoPath.projection(projection);
+        _projectionFlag = true;
         return _chart;
     };
 
