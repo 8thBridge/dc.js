@@ -1560,43 +1560,7 @@ dc.coordinateGridChart = function (_chart) {
 
             _chart.renderBrush(_chart.g());
 
-<<<<<<< HEAD
-            if(_chart.mouseZoomEnabled()) {
-                _chart.root().call(d3.behavior.zoom()
-                    .x(_chart.x())
-                    .scaleExtent([1, 100])
-                    .on("zoom", function() {
-                        _chart.focus(_chart.x().domain());
-                        _chart.invokeZoomedListener(_chart);
-                        updateRangeSelChart();
-                    }));
-            }
-
-            _chart.chartBodyG().call(d3.behavior.drag()
-                    .on("drag", function() {
-                        var deltaX = d3.event.dx;
-                        var curDomain = _chart.x().domain();
-                        var xMin = _chart.x()(curDomain[0]);
-                        var xMax = _chart.x()(curDomain[1]);
-                        _chart.focus([_chart.x().invert(xMin - deltaX), _chart.x().invert(xMax - deltaX)]);
-                        _chart.invokeDraggedListener(_chart);
-                        updateRangeSelChart();
-                    }));
-
-            function updateRangeSelChart() {
-                if (_rangeSelChart) {
-                    var refDom = _chart.x().domain();
-                    var origDom = _rangeSelChart.xOriginalDomain();
-                    var newDom = [
-                        refDom[0] < origDom[0] ? refDom[0] : origDom[0],
-                        refDom[1] > origDom[1] ? refDom[1] : origDom[1]];
-                    _rangeSelChart.focus(newDom);
-                    _rangeSelChart.filter(refDom);
-                }
-            }
-=======
             enableMouseZoom();
->>>>>>> 55988f2d7a9b6e6d8eacec0d1ca77b1f8ca721b1
         }
 
         return _chart;
